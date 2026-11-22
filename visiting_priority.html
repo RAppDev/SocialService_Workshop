@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نظام أولوية الزيارات (تجريبي)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Zayed University palette: maroon, crimson, beige. --alert is kept bright red so warnings stand out from the maroon. */
+  :root { --teal:#801634; --teal2:#99022F; --coral:#99022F; --alert:#D32F2F; --alertbg:#FDE4E4; --muted:#B9AEA3; --sand:#EDE5DB; --light:#F5F0EA; --mint:#DCEBDF; --rose:#F4DDE2; --ink:#231F20; --grey:#6B6460; --line:#E2DBD3; --amber:#9A6B2F; --green:#2E7D57; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif; color:var(--ink); background:#F8F8F8; font-size:16px; line-height:1.65; }
+  header { background:var(--teal); color:#fff; padding:14px 22px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:21px; } header p { margin:2px 0 0; font-size:14px; color:#EDE5DB; }
+  .badge { background:var(--sand); color:var(--teal); border-radius:14px; padding:4px 12px; font-size:13px; font-weight:700; }
+  nav { display:flex; gap:4px; background:#fff; border-bottom:1px solid var(--line); padding:0 16px; overflow-x:auto; }
+  nav button { border:0; background:none; font:inherit; font-weight:600; color:var(--grey); padding:12px 14px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  nav button.on { color:var(--teal); border-bottom-color:var(--coral); }
+  main { max-width:1180px; margin:0 auto; padding:18px; }
+  .view { display:none; } .view.on { display:block; }
+  .intro { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; gap:20px; flex-wrap:wrap; font-size:15px; }
+  .intro div { flex:1; min-width:220px; }
+  .intro b { color:var(--teal); }
+  .casebtns { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .casebtns button { flex:1; min-width:180px; border:2px solid var(--line); background:#fff; border-radius:10px; padding:12px; font:inherit; font-weight:700; color:var(--teal); cursor:pointer; }
+  .casebtns button.on { border-color:var(--teal); background:var(--light); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:900px) { .grid2 { grid-template-columns:1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { margin:0 0 10px; font-size:18px; color:var(--teal); }
+  .card h3 { margin:14px 0 6px; font-size:16px; color:var(--teal); }
+  ul.facts { margin:0; padding-right:20px; } ul.facts li { margin-bottom:4px; }
+  .note { margin-top:12px; border:2px dashed var(--coral); background:#FFF8F5; border-radius:8px; padding:10px 12px; }
+  .note .lbl { color:var(--coral); font-weight:700; font-size:14px; }
+  .step { border-top:1px solid var(--line); padding-top:12px; margin-top:12px; }
+  .step:first-child { border-top:0; padding-top:0; margin-top:0; }
+  .step .t { display:flex; gap:10px; align-items:center; font-weight:700; color:var(--teal); margin-bottom:8px; }
+  .num { flex:none; width:28px; height:28px; border-radius:50%; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .choices { display:flex; gap:8px; flex-wrap:wrap; }
+  .choices button { flex:1; min-width:110px; border:2px solid var(--line); background:#fff; border-radius:10px; padding:8px; font:inherit; cursor:pointer; text-align:center; }
+  .choices button small { display:block; color:var(--grey); font-size:12px; }
+  .choices button.on { border-color:var(--teal); background:var(--light); font-weight:700; }
+  button.btn { background:var(--teal); color:#fff; border:0; border-radius:8px; padding:10px 18px; font:inherit; font-weight:600; cursor:pointer; }
+  button.btn.alt { background:#fff; color:var(--teal); border:1px solid var(--teal); }
+  button.btn.small { padding:5px 11px; font-size:14px; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .result { border-radius:10px; padding:14px; text-align:center; }
+  .result .big { font-size:28px; font-weight:700; }
+  .r-urgent { background:var(--alertbg); color:var(--alert); } .r-high { background:var(--sand); color:var(--amber); } .r-normal { background:var(--mint); color:var(--green); }
+  .cmp { text-align:center; margin-top:8px; font-weight:600; }
+  .reasons { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:600px) { .reasons { grid-template-columns:1fr; } }
+  .reasons > div { border-radius:8px; padding:10px 12px; }
+  .up { background:var(--rose); } .down { background:var(--mint); }
+  .reasons h4 { margin:0 0 6px; font-size:15px; }
+  .reasons ul { margin:0; padding-right:18px; font-size:15px; }
+  .lvl { font-size:12px; color:var(--grey); }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; vertical-align:top; }
+  th { background:var(--light); color:var(--teal); width:45%; }
+  .fields { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+  @media (max-width:600px) { .fields { grid-template-columns:1fr; } }
+  label.f { display:block; font-size:14px; font-weight:600; color:var(--grey); margin-bottom:3px; }
+  select, input[type=number], textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:7px 9px; font:inherit; background:#fff; }
+  textarea { min-height:70px; }
+  .muted { color:var(--grey); font-size:14px; }
+  .vote { display:grid; grid-template-columns:150px 1fr 80px; gap:10px; align-items:center; margin:6px 0; }
+  .hbar { height:20px; border-radius:4px; min-width:4px; }
+  .hb { display:grid; grid-template-columns:190px 1fr 50px; gap:10px; align-items:center; margin:6px 0; }
+  .track { background:var(--light); border-radius:4px; height:18px; } .fill { height:18px; border-radius:4px; }
+  .ok-msg { color:var(--green); font-weight:600; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>نظام أولوية الزيارات (تجريبي)</h1><p>نموذج تنبؤي (Predictive Model) يقترح أولوية الزيارة المنزلية</p></div>
+  <span class="badge">للتدريب فقط — بيانات وهمية</span>
+</header>
+<nav id="tabs">
+  <button data-v="cases" class="on">الحالات الثلاث</button>
+  <button data-v="try">غيّر البيانات وجرّب</button>
+  <button data-v="room">نتائج القاعة</button>
+  <button data-v="how">كيف يعمل النظام؟</button>
+</nav>
+<main>
+  <section id="v-cases" class="view on">
+    <div class="intro">
+      <div><b>ماذا يفعل النظام؟</b> يقرأ بيانات الطلب ويقترح أولوية الزيارة: <b>عاجلة</b> (خلال 48 ساعة) أو <b>عالية</b> (خلال أسبوع) أو <b>عادية</b> (خلال أسبوعين).</div>
+      <div><b>كيف تعلّم؟</b> من 500 طلب سابق (بيانات تاريخية Historical Data) وقرارات الأخصائيين فيها.</div>
+      <div><b>ما الذي لا يراه؟</b> ملاحظات الأخصائي. يقرأ الحقول فقط.</div>
+    </div>
+    <div class="casebtns" id="caseBtns"></div>
+    <div class="grid2">
+      <div class="card">
+        <h2 id="cTitle"></h2>
+        <h3 style="margin-top:0">ما نعرفه عن الحالة</h3>
+        <ul class="facts" id="cFacts"></ul>
+        <div class="note"><div class="lbl">ملاحظة الأخصائي — لا يراها النظام</div><div id="cNote"></div></div>
+        <h3>البيانات التي أُدخلت في النظام</h3>
+        <table id="cFields"></table>
+      </div>
+      <div class="card">
+        <div class="step">
+          <div class="t"><span class="num">1</span>ما قراركم أنتم؟</div>
+          <div class="choices" id="before"></div>
+        </div>
+        <div class="step">
+          <div class="t"><span class="num">2</span>ماذا يقترح النظام؟</div>
+          <button class="btn" id="showBtn" type="button" disabled>اعرض اقتراح النظام</button>
+          <p class="muted" id="showHint" style="margin:6px 0 0">اختاروا قراركم أولاً.</p>
+          <div id="result" style="margin-top:10px"></div>
+        </div>
+        <div class="step" id="whyStep" style="display:none">
+          <div class="t"><span class="num">3</span>لماذا اقترح النظام ذلك؟</div>
+          <div id="why"></div>
+        </div>
+        <div class="step" id="finalStep" style="display:none">
+          <div class="t"><span class="num">4</span>قراركم النهائي</div>
+          <div class="choices" id="final"></div>
+          <label class="f" for="reason" style="margin-top:10px">السبب (كما تكتبونه في ملف الحالة)</label>
+          <textarea id="reason"></textarea>
+          <div style="margin-top:8px"><button class="btn" id="saveBtn" type="button">احفظ القرار</button> <span id="saved" class="ok-msg"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-try" class="view">
+    <div class="grid2">
+      <div class="card">
+        <h2>غيّر البيانات وشاهد ماذا يحدث</h2>
+        <p class="muted" style="margin-top:0">ابدأ من إحدى الحالات، ثم غيّر حقلاً واحداً (مثلاً: «الوضع الوظيفي لرب الأسرة»).</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="tryLoad"></div>
+        <div class="fields">
+          <div><label class="f" for="prob">المشكلة الرئيسية</label><select id="prob"></select></div>
+          <div><label class="f" for="src">الجهة المُحيلة</label><select id="src"></select></div>
+          <div><label class="f" for="emp">الوضع الوظيفي لرب الأسرة</label><select id="emp"></select></div>
+          <div><label class="f" for="reg">المنطقة</label><select id="reg"></select></div>
+          <div><label class="f" for="kids">عدد الأطفال (أقل من 18 سنة)</label><input type="number" id="kids" min="0" max="10"></div>
+          <div><label class="f" for="reps">بلاغات سابقة</label><select id="reps"><option value="0">لا يوجد</option><option value="1">بلاغ واحد</option><option value="2">بلاغان أو أكثر</option></select></div>
+          <div><label class="f" for="sup">طلب دعم اجتماعي سابق أو حالي</label><select id="sup"><option value="0">لا</option><option value="1">نعم</option></select></div>
+          <div><label class="f" for="spec">فرد يحتاج رعاية خاصة</label><select id="spec"><option value="0">لا</option><option value="1">نعم</option></select></div>
+          <div><label class="f" for="absn">غياب عن المدرسة أكثر من 15 يوماً</label><select id="absn"><option value="0">لا</option><option value="1">نعم</option></select></div>
+          <div><label class="f" for="safety">علامات خطر على السلامة</label><select id="safety"><option value="0">لا</option><option value="1">نعم</option></select></div>
+        </div>
+      </div>
+      <div class="card"><h2>اقتراح النظام</h2><div id="tryOut"></div></div>
+    </div>
+  </section>
+
+  <section id="v-room" class="view">
+    <div class="grid2">
+      <div class="card">
+        <h2>تصويت القاعة</h2>
+        <p class="muted" style="margin-top:0">للمدرب: بعد كل حالة، اطلب رفع الأيدي وأدخل العدد.</p>
+        <div id="votes"></div>
+      </div>
+      <div class="card">
+        <h2>القرارات المحفوظة على هذا الجهاز</h2>
+        <div id="recs"></div>
+        <button class="btn alt small" id="clearRecs" type="button" style="margin-top:8px">مسح</button> <span id="clearMsg" class="muted"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-how" class="view">
+    <div class="grid2">
+      <div class="card">
+        <h2>كيف بُني النظام؟</h2>
+        <p>هذا نموذج تنبؤي (Predictive Model) من نوع الانحدار اللوجستي (Logistic Regression). تعلّم من <b id="nCases"></b> طلباً سابقاً (وهمياً): ما الصفات التي جعلت الأخصائيين في الماضي يصنّفون الطلب «عاجلاً»؟</p>
+        <p>عندما اختبرناه على طلبات قديمة لم يتعلم منها، وافق قرارات الأخصائيين في <b id="acc"></b> منها. هذه هي الدقة (Accuracy).</p>
+        <p style="background:var(--sand);padding:10px;border-radius:8px"><b>انتبه:</b> الدقة العالية تعني أن النظام يكرر قرارات الماضي جيداً. إذا كانت قرارات الماضي غير عادلة، فسيكررها النظام أيضاً.</p>
+        <h3>ماذا تعلّم من قرارات الماضي؟</h3>
+        <p class="muted" style="margin-top:0">نسبة الطلبات التي صُنّفت «عاجلة» في الماضي، من بين الطلبات التي <b>لا توجد فيها علامات خطر ولا بلاغات سابقة</b>:</p>
+        <div id="bias"></div>
+      </div>
+      <div class="card">
+        <h2>ما الذي يرفع الأولوية وما الذي يخفضها؟</h2>
+        <p class="muted" style="margin-top:0">الترتيب من الأقوى إلى الأضعف، مقارنةً بطلب أساسي: ضغوط مالية، تواصل من الأسرة نفسها، رب الأسرة يعمل، المنطقة أ.</p>
+        <div id="weights"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const MODEL = {"intercept":-5.887,"coef":[{"key":"prob","val":"خلافات أسرية","w":0.419},{"key":"prob","val":"تعثر دراسي للأبناء","w":0.103},{"key":"prob","val":"رعاية كبار السن","w":-0.512},{"key":"prob","val":"رعاية أصحاب الهمم","w":-0.355},{"key":"prob","val":"حماية طفل","w":2.122},{"key":"src","val":"مدرسة","w":0.454},{"key":"src","val":"مستشفى / مركز صحي","w":0.2},{"key":"src","val":"جهة حكومية أخرى","w":0.705},{"key":"src","val":"الشرطة / النيابة","w":1.182},{"key":"emp","val":"لا يعمل","w":1.937},{"key":"emp","val":"متقاعد","w":0.239},{"key":"kids","val":null,"w":0.198},{"key":"sup","val":null,"w":1.034},{"key":"reps","val":null,"w":1.593},{"key":"spec","val":null,"w":0.766},{"key":"absn","val":null,"w":1.082},{"key":"safety","val":null,"w":4.32},{"key":"reg","val":"ب","w":-0.324},{"key":"reg","val":"ج","w":0.571},{"key":"reg","val":"د","w":0.167}],"n":500,"acc":0.928,"cases":{"1":0.995,"2":0.7,"3":0.003},"base_rate":0.22,"bias":{"emp_work":[179,0],"emp_none":[91,19],"sup_no":[212,2],"sup_yes":[99,12],"safety_yes":[58,93]}};
+const CASES = [{"name":"الحالة 1: أسرة «النور»","facts":["إحالة من الشرطة","الجيران أبلغوا أن طفلة عمرها 6 سنوات تُترك وحدها في الشقة لساعات طويلة في الليل","سُمع صراخ متكرر من الشقة","هذا هو البلاغ الثالث خلال سنة","الأم تعمل بدوام ليلي، والأب لا يعيش مع الأسرة"],"note":"اتصلتُ بالأم. أكدت أنها تترك الطفلتين وحدهما أثناء عملها لأنه لا يوجد من يعتني بهما، وأغلقت الخط عندما سألتها عن الصراخ.","f":{"prob":"حماية طفل","src":"الشرطة / النيابة","emp":"يعمل","reg":"أ","kids":2,"reps":2,"sup":0,"spec":0,"absn":0,"safety":1}},{"name":"الحالة 2: أسرة «الراشد»","facts":["إحالة من المدرسة","الابن (9 سنوات) غاب 16 يوماً هذا الفصل","الأب فقد عمله قبل 5 أشهر، وقدّمت الأسرة طلب دعم اجتماعي","في الأسرة 4 أطفال","لا توجد بلاغات سابقة"],"note":"لاحظ المعلم أن الطفل يأتي أحياناً جائعاً ومتعباً. تقول الأم إن ابنها أصيب بنوبات ربو هذا الشهر، وإنهم باعوا السيارة فلا توجد مواصلات للمدرسة. الأسرة متعاونة وترحب بالزيارة.","f":{"prob":"تعثر دراسي للأبناء","src":"مدرسة","emp":"لا يعمل","reg":"ج","kids":4,"reps":0,"sup":1,"spec":0,"absn":1,"safety":0}},{"name":"الحالة 3: أسرة «الهدى»","facts":["الأم تواصلت بنفسها مع المركز","ابنتها (14 سنة) تغيّر سلوكها في الأشهر الأخيرة وأصبحت تنعزل في غرفتها","الأسرة مستقرة مادياً، والأب يعمل","في الأسرة طفلان","لا توجد طلبات أو بلاغات سابقة"],"note":"في المقابلة الأولى جلستُ مع الفتاة وحدها. قالت إن خالها الذي يعيش معهم يضربها عندما يغيب والداها، وكانت على ذراعها كدمات. قالت إنها خائفة من العودة إلى البيت. (لم تُحدَّث بيانات النظام بعد المقابلة.)","f":{"prob":"تعثر دراسي للأبناء","src":"طلب ذاتي من الأسرة","emp":"يعمل","reg":"أ","kids":2,"reps":0,"sup":0,"spec":0,"absn":0,"safety":0}}];
+const OPTS = { prob: ['ضغوط مالية', 'خلافات أسرية', 'تعثر دراسي للأبناء', 'رعاية كبار السن', 'رعاية أصحاب الهمم', 'حماية طفل'],
+  src: ['طلب ذاتي من الأسرة', 'مدرسة', 'مستشفى / مركز صحي', 'جهة حكومية أخرى', 'الشرطة / النيابة'], emp: ['يعمل', 'لا يعمل', 'متقاعد'], reg: ['أ', 'ب', 'ج', 'د'] };
+const SRC_LABEL = { 'طلب ذاتي من الأسرة': 'تواصل من الأسرة نفسها' };
+const FIELD_LABEL = { prob: 'المشكلة الرئيسية', src: 'الجهة المُحيلة', emp: 'الوضع الوظيفي لرب الأسرة', reg: 'المنطقة', kids: 'عدد الأطفال', reps: 'بلاغات سابقة', sup: 'طلب دعم اجتماعي', spec: 'فرد يحتاج رعاية خاصة', absn: 'غياب عن المدرسة أكثر من 15 يوماً', safety: 'علامات خطر على السلامة' };
+const fieldVal = (k, v) => k === 'reps' ? ['لا يوجد', 'بلاغ واحد', 'بلاغان أو أكثر'][v] : ['sup', 'spec', 'absn', 'safety'].includes(k) ? (v ? 'نعم' : 'لا') : k === 'src' ? (SRC_LABEL[v] || v) : k === 'reg' ? 'المنطقة ' + v : String(v);
+function reasonText(c, f) {
+  if (c.val === null) return { kids: `عدد الأطفال (${f.kids})`, reps: 'يوجد بلاغات سابقة', sup: 'يوجد طلب دعم اجتماعي', spec: 'يوجد فرد يحتاج رعاية خاصة', absn: 'غياب عن المدرسة أكثر من 15 يوماً', safety: 'توجد علامات خطر على السلامة' }[c.key];
+  return { prob: 'المشكلة: ', src: 'الجهة المُحيلة: ', emp: 'رب الأسرة: ', reg: 'المنطقة ' }[c.key] + (SRC_LABEL[c.val] || c.val);
+}
+const KEY = 'visit_priority_v2';
+let ST = { recs: [], votes: {} };
+try { const r = localStorage.getItem(KEY); if (r) ST = Object.assign(ST, JSON.parse(r)); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(ST)); } catch (e) {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function terms(f) { return MODEL.coef.map(c => ({ c, v: c.w * (c.val === null ? +f[c.key] : (f[c.key] === c.val ? 1 : 0)) })).filter(t => Math.abs(t.v) > 0.05); }
+function prob(f) { const z = MODEL.intercept + terms(f).reduce((a, t) => a + t.v, 0); return 1 / (1 + Math.exp(-z)); }
+const BANDS = { 'عاجلة': ['r-urgent', 'زيارة خلال 48 ساعة'], 'عالية': ['r-high', 'زيارة خلال أسبوع'], 'عادية': ['r-normal', 'زيارة خلال أسبوعين'] };
+const band = p => p >= 0.5 ? 'عاجلة' : p >= 0.15 ? 'عالية' : 'عادية';
+const score = p => Math.max(1, Math.min(99, Math.round(p * 100)));
+const strength = v => Math.abs(v) >= 1.5 ? 'تأثير قوي' : Math.abs(v) >= 0.6 ? 'تأثير متوسط' : 'تأثير ضعيف';
+function resultHTML(f) {
+  const p = prob(f), b = band(p), [cls, txt] = BANDS[b];
+  return `<div class="result ${cls}"><div>النظام يقترح</div><div class="big">${b}</div><div>${txt}</div><div style="margin-top:4px">درجة الأولوية: ${score(p)} من 100</div></div>`;
+}
+function whyHTML(f) {
+  const t = terms(f), up = t.filter(x => x.v > 0).sort((a, b) => b.v - a.v), down = t.filter(x => x.v < 0).sort((a, b) => a.v - b.v);
+  const li = x => `<li>${esc(reasonText(x.c, f))} <span class="lvl">(${strength(x.v)})</span></li>`;
+  return `<p class="muted" style="margin-top:0">يبدأ كل طلب بأولوية منخفضة، ثم ترفعها أو تخفضها هذه العوامل:</p><div class="reasons"><div class="up"><h4>رفع الأولوية</h4><ul>${up.length ? up.map(li).join('') : '<li>لا شيء</li>'}</ul></div><div class="down"><h4>خفّض الأولوية</h4><ul>${down.length ? down.map(li).join('') : '<li>لا شيء</li>'}</ul></div></div>
+    <p class="muted" style="margin-bottom:0">لا يظهر هنا أي شيء من ملاحظة الأخصائي، لأن النظام لا يقرؤها.</p>`;
+}
+const choiceHTML = id => ['عاجلة', 'عالية', 'عادية'].map(b => `<button type="button" data-b="${b}" data-g="${id}">${b}<small>${BANDS[b][1]}</small></button>`).join('');
+
+// ---- guided cases ----
+let ci = 0, before = '', finalD = '';
+$('caseBtns').innerHTML = CASES.map((c, i) => `<button type="button" data-i="${i}">${esc(c.name)}</button>`).join('');
+$('before').innerHTML = choiceHTML('before'); $('final').innerHTML = choiceHTML('final');
+function loadCase(i) {
+  ci = i; before = ''; finalD = '';
+  document.querySelectorAll('#caseBtns button').forEach(b => b.classList.toggle('on', +b.dataset.i === i));
+  const c = CASES[i];
+  $('cTitle').textContent = c.name; $('cFacts').innerHTML = c.facts.map(x => `<li>${esc(x)}</li>`).join(''); $('cNote').textContent = c.note;
+  $('cFields').innerHTML = Object.keys(FIELD_LABEL).map(k => `<tr><th>${FIELD_LABEL[k]}</th><td>${esc(fieldVal(k, c.f[k]))}</td></tr>`).join('');
+  document.querySelectorAll('.choices button').forEach(b => b.classList.remove('on'));
+  $('showBtn').disabled = true; $('showHint').style.display = 'block'; $('result').innerHTML = ''; $('whyStep').style.display = 'none'; $('finalStep').style.display = 'none'; $('reason').value = ''; $('saved').textContent = '';
+}
+$('caseBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) loadCase(+b.dataset.i); });
+document.querySelectorAll('.choices').forEach(el => el.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  if (b.dataset.g === 'before') { before = b.dataset.b; $('showBtn').disabled = false; $('showHint').style.display = 'none'; } else finalD = b.dataset.b;
+}));
+$('showBtn').addEventListener('click', () => {
+  const f = CASES[ci].f, b = band(prob(f));
+  $('result').innerHTML = resultHTML(f) + `<div class="cmp">قراركم: ${before} — ${before === b ? '<span style="color:var(--green)">نفس اقتراح النظام</span>' : '<span style="color:var(--coral)">مختلف عن النظام</span>'}</div>`;
+  $('why').innerHTML = whyHTML(f); $('whyStep').style.display = 'block'; $('finalStep').style.display = 'block';
+});
+$('saveBtn').addEventListener('click', () => {
+  if (!finalD) { $('saved').style.color = 'var(--alert)'; $('saved').textContent = 'اختاروا القرار النهائي أولاً.'; return; }
+  const f = CASES[ci].f;
+  ST.recs.push({ name: CASES[ci].name, before, sys: band(prob(f)), final: finalD, reason: $('reason').value }); save(); renderRecs();
+  $('saved').style.color = ''; $('saved').textContent = 'تم حفظ القرار.';
+});
+
+// ---- try ----
+for (const k of ['prob', 'src', 'emp', 'reg']) $(k).innerHTML = OPTS[k].map(o => `<option value="${o}">${SRC_LABEL[o] || o}</option>`).join('');
+$('tryLoad').innerHTML = CASES.map((c, i) => `<button class="btn alt small" type="button" data-t="${i}">${esc(c.name.split(':')[0])}</button>`).join('');
+function setForm(f) { for (const [k, v] of Object.entries(f)) $(k).value = v; renderTry(); }
+function readForm() { return { prob: $('prob').value, src: $('src').value, emp: $('emp').value, reg: $('reg').value, kids: Math.max(0, +$('kids').value || 0), reps: +$('reps').value, sup: +$('sup').value, spec: +$('spec').value, absn: +$('absn').value, safety: +$('safety').value }; }
+function renderTry() { const f = readForm(); $('tryOut').innerHTML = resultHTML(f) + '<h3>لماذا؟</h3>' + whyHTML(f); }
+$('tryLoad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setForm(CASES[+b.dataset.t].f); });
+document.querySelector('#v-try .fields').addEventListener('change', renderTry);
+document.querySelector('#v-try .fields').addEventListener('input', renderTry);
+
+// ---- room ----
+function renderVotes() {
+  $('votes').innerHTML = CASES.map((c, i) => {
+    const b = band(prob(c.f)), v = ST.votes[i] || { a: 0, d: 0 }, tot = Math.max(1, v.a + v.d);
+    return `<h3>${esc(c.name)} <span class="muted">— النظام: ${b}</span></h3>
+      <div class="vote"><span>يوافقون النظام</span><div class="hbar" data-bar="${i}a" style="width:${100 * v.a / tot}%;background:var(--teal)"></div><input type="number" min="0" data-vk="${i}" data-vt="a" value="${v.a}" aria-label="عدد الموافقين"></div>
+      <div class="vote"><span>يخالفون النظام</span><div class="hbar" data-bar="${i}d" style="width:${100 * v.d / tot}%;background:var(--coral)"></div><input type="number" min="0" data-vk="${i}" data-vt="d" value="${v.d}" aria-label="عدد المخالفين"></div>`;
+  }).join('');
+}
+$('votes').addEventListener('input', e => { const t = e.target; if (!t.dataset.vk) return; const k = t.dataset.vk; ST.votes[k] = ST.votes[k] || { a: 0, d: 0 }; ST.votes[k][t.dataset.vt] = Math.max(0, +t.value || 0); save();
+  const v = ST.votes[k], tot = Math.max(1, v.a + v.d); document.querySelector(`[data-bar="${k}a"]`).style.width = (100 * v.a / tot) + '%'; document.querySelector(`[data-bar="${k}d"]`).style.width = (100 * v.d / tot) + '%'; });
+function renderRecs() {
+  $('recs').innerHTML = ST.recs.length ? `<table><thead><tr><th style="width:auto">الحالة</th><th style="width:auto">قبل</th><th style="width:auto">النظام</th><th style="width:auto">النهائي</th><th style="width:auto">السبب</th></tr></thead><tbody>${ST.recs.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.before)}</td><td>${esc(r.sys)}</td><td><b>${esc(r.final)}</b></td><td>${esc(r.reason)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">لا توجد قرارات محفوظة.</p>';
+}
+let armed = false;
+$('clearRecs').addEventListener('click', () => { if (!armed) { armed = true; $('clearMsg').textContent = 'اضغط مرة أخرى للتأكيد.'; setTimeout(() => { armed = false; $('clearMsg').textContent = ''; }, 5000); return; } armed = false; ST.recs = []; ST.votes = {}; save(); renderRecs(); renderVotes(); $('clearMsg').textContent = 'تم المسح.'; });
+
+// ---- how ----
+function renderHow() {
+  $('nCases').textContent = MODEL.n; $('acc').textContent = Math.round(MODEL.acc * 100) + '%';
+  const B = MODEL.bias, rows = [['رب الأسرة يعمل', B.emp_work, 'var(--muted)'], ['رب الأسرة لا يعمل', B.emp_none, 'var(--teal)'], ['لا يوجد طلب دعم سابق', B.sup_no, 'var(--muted)'], ['يوجد طلب دعم سابق', B.sup_yes, 'var(--teal)']];
+  $('bias').innerHTML = rows.map(([l, [n, p], c]) => `<div class="hb"><span>${l}</span><div class="track"><div class="fill" style="width:${Math.max(1, p * 4)}%;background:${c}"></div></div><b>${p}%</b></div>`).join('') + `<p class="muted">للمقارنة: الطلبات التي فيها علامات خطر صُنّفت «عاجلة» بنسبة ${B.safety_yes[1]}%.</p>`;
+  const ws = MODEL.coef.slice().sort((a, b) => b.w - a.w);
+  const up = ws.filter(c => c.w > 0.05), down = ws.filter(c => c.w < -0.05);
+  const name = c => c.val === null ? { kids: 'كل طفل إضافي', reps: 'كل بلاغ سابق', sup: 'طلب دعم اجتماعي', spec: 'فرد يحتاج رعاية خاصة', absn: 'غياب عن المدرسة أكثر من 15 يوماً', safety: 'علامات خطر على السلامة' }[c.key] : reasonText(c, {});
+  $('weights').innerHTML = `<div class="reasons"><div class="up"><h4>يرفع الأولوية</h4><ul>${up.map(c => `<li>${esc(name(c))} <span class="lvl">(${strength(c.w)})</span></li>`).join('')}</ul></div><div class="down"><h4>يخفض الأولوية</h4><ul>${down.map(c => `<li>${esc(name(c))} <span class="lvl">(${strength(c.w)})</span></li>`).join('')}</ul></div></div>`;
+}
+
+function showTab(v) { document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v)); }
+$('tabs').addEventListener('click', e => { if (e.target.dataset.v) showTab(e.target.dataset.v); });
+loadCase(0); setForm(CASES[1].f); renderVotes(); renderRecs(); renderHow();
+window.__prob = prob; window.__band = band; window.__CASES = CASES;
+</script>
+</body>
+</html>

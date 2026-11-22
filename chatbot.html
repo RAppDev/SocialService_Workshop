@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>المساعد الذكي التجريبي (Chatbot)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Zayed University palette: maroon, crimson, beige. --alert is kept bright red so warnings stand out from the maroon. */
+  :root { --teal:#801634; --teal2:#99022F; --coral:#99022F; --alert:#D32F2F; --alertbg:#FDE4E4; --muted:#B9AEA3; --sand:#EDE5DB; --light:#F5F0EA; --mint:#DCEBDF; --rose:#F4DDE2; --ink:#231F20; --grey:#6B6460; --line:#E2DBD3; --amber:#9A6B2F; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif; color:var(--ink); background:#F8F8F8; font-size:16px; line-height:1.65; }
+  header { background:var(--teal); color:#fff; padding:14px 22px; }
+  header h1 { margin:0; font-size:21px; } header p { margin:2px 0 0; font-size:14px; color:#EDE5DB; }
+  .steps { display:flex; gap:6px; flex-wrap:wrap; padding:10px 22px; background:#fff; border-bottom:1px solid var(--line); font-size:14px; }
+  .steps span { background:var(--light); border-radius:16px; padding:3px 12px; }
+  .steps b { color:var(--coral); }
+  nav { display:flex; gap:4px; background:#fff; border-bottom:1px solid var(--line); padding:0 16px; overflow-x:auto; }
+  nav button { border:0; background:none; font:inherit; font-weight:600; color:var(--grey); padding:12px 14px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  nav button.on { color:var(--teal); border-bottom-color:var(--coral); }
+  nav button.trainer { margin-inline-start:auto; font-size:14px; }
+  main { max-width:1180px; margin:0 auto; padding:18px; }
+  .view { display:none; } .view.on { display:block; }
+  .notice { background:var(--sand); border-radius:8px; padding:8px 14px; font-size:14px; margin-bottom:14px; }
+  .grid2 { display:grid; grid-template-columns:1.5fr 1fr; gap:16px; }
+  @media (max-width:880px) { .grid2 { grid-template-columns:1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { margin:0 0 10px; font-size:18px; color:var(--teal); }
+  .card h3 { margin:14px 0 6px; font-size:16px; color:var(--teal); }
+  .chat { height:440px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px 2px; }
+  .msg { max-width:82%; padding:9px 13px; border-radius:12px; white-space:pre-wrap; }
+  .msg.user { align-self:flex-start; background:var(--teal); color:#fff; }
+  .msg.bot { align-self:flex-end; background:var(--light); }
+  .msg.bot.esc { background:var(--rose); } .msg.bot.refuse { background:var(--sand); }
+  .tag { display:inline-block; font-size:12px; font-weight:700; padding:1px 9px; border-radius:10px; color:#fff; margin-bottom:4px; }
+  .composer { display:flex; gap:8px; margin-top:10px; }
+  .composer input { flex:1; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; }
+  button.btn { background:var(--teal); color:#fff; border:0; border-radius:8px; padding:9px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  button.btn.alt { background:#fff; color:var(--teal); border:1px solid var(--teal); }
+  button.btn.warn { background:#fff; color:var(--alert); border:1px solid var(--alert); }
+  button.btn.small { padding:5px 11px; font-size:14px; }
+  .decision { font-size:15px; } .decision .k { color:var(--grey); font-size:13px; margin-top:8px; }
+  .tests { display:flex; flex-direction:column; gap:6px; }
+  .tests button { text-align:right; background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; font-size:14px; cursor:pointer; }
+  .tests button:hover { background:var(--light); }
+  .tests .n { color:var(--coral); font-weight:700; margin-left:6px; }
+  label.f { display:block; font-weight:600; font-size:14px; margin:10px 0 3px; }
+  .hint { color:var(--grey); font-size:13px; font-weight:400; }
+  input.t, textarea.t { width:100%; border:1px solid var(--line); border-radius:6px; padding:8px 10px; font:inherit; }
+  textarea.t { min-height:80px; resize:vertical; }
+  .chk { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; background:#fff; }
+  .item .q { font-weight:700; color:var(--teal); }
+  .item .kw { font-size:14px; color:var(--grey); }
+  .pill { display:inline-block; font-size:12px; padding:0 8px; border-radius:10px; background:var(--light); color:var(--teal); margin-inline-start:6px; }
+  .rule { border:1px solid var(--line); border-right:6px solid var(--alert); border-radius:10px; padding:12px; margin-bottom:12px; background:#fff; }
+  .rule.refuse { border-right-color:var(--amber); }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  @media (max-width:700px) { .stats { grid-template-columns:repeat(2,1fr); } }
+  .stat { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center; }
+  .stat b { display:block; font-size:30px; color:var(--teal); }
+  .bar { display:grid; grid-template-columns:190px 1fr 40px; gap:10px; align-items:center; margin:6px 0; font-size:15px; }
+  .bar .track { background:var(--light); border-radius:4px; height:18px; } .bar .fill { height:18px; border-radius:4px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { border-bottom:1px solid var(--line); padding:7px 8px; text-align:right; vertical-align:top; }
+  th { background:var(--light); color:var(--teal); }
+  .ok { color:#1E7B4A; font-weight:700; } .no { color:var(--alert); font-weight:700; }
+  .muted { color:var(--grey); font-size:14px; }
+  textarea.io { width:100%; min-height:110px; font-family:monospace; font-size:12px; direction:ltr; border:1px solid var(--line); border-radius:6px; padding:8px; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  .ok-msg { color:#1E7B4A; font-weight:600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>المساعد الذكي التجريبي (Chatbot)</h1>
+  <p>روبوت محادثة لمركز خدمات اجتماعية افتراضي. صمّموه وجرّبوه بأنفسكم.</p>
+</header>
+<div class="steps"><b>خطوات النشاط:</b>
+  <span>1. جرّبوا المساعد</span><span>2. أضيفوا الأمثلة الثلاثة الجاهزة</span><span>3. أضيفوا ثلاثة أمثلة من عندكم</span><span>4. اختبروا المساعد</span><span>5. شاهدوا الإحصائيات</span>
+</div>
+<nav id="tabs">
+  <button data-v="chat" class="on">جرّب المساعد</button>
+  <button data-v="kb">قاعدة المعرفة (Knowledge Base)</button>
+  <button data-v="rules">كلمات التحويل الفوري</button>
+  <button data-v="dash">الإحصائيات (Dashboard)</button>
+  <button data-v="trainer" class="trainer">للمدرب</button>
+</nav>
+<main>
+  <div class="notice">كل المعلومات في هذا المساعد وهمية، وُضعت للتدريب فقط. لا تكتبوا أي بيانات حقيقية.</div>
+
+  <section id="v-chat" class="view on">
+    <div class="grid2">
+      <div class="card">
+        <h2>تحدّث مع المساعد</h2>
+        <div id="chat" class="chat" aria-live="polite"></div>
+        <form id="composer" class="composer">
+          <label for="q" class="sr">رسالتك</label>
+          <input id="q" autocomplete="off" placeholder="اكتب سؤالاً كما يكتبه أحد المراجعين…">
+          <button class="btn" type="submit">إرسال</button>
+        </form>
+        <div class="row" style="margin-top:8px"><button class="btn alt small" id="clearChat" type="button">محادثة جديدة</button></div>
+      </div>
+      <div>
+        <div class="card decision">
+          <h2>كيف قرّر المساعد؟</h2>
+          <div id="why" class="muted">أرسل رسالة، وسيظهر هنا سبب الرد.</div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>رسائل الاختبار (للخطوة 4)</h2>
+          <p class="muted" style="margin-top:0">اضغط على أي رسالة لإرسالها إلى المساعد، ثم سجّلوا النتيجة في دليل المشارك.</p>
+          <div class="tests" id="tests"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-kb" class="view">
+    <div class="grid2">
+      <div class="card">
+        <h2 id="formTitle">أضف سؤالاً جديداً</h2>
+        <p class="muted" style="margin-top:0">املأ الحقول الأربعة ثم اضغط «حفظ». يمكنكم نسخ الأمثلة الجاهزة من دليل المشارك.</p>
+        <label class="f" for="fTitle">1. السؤال <span class="hint">(عنوان قصير، مثل: مدة دراسة الطلب)</span></label>
+        <input class="t" id="fTitle">
+        <label class="f" for="fKeys">2. الكلمات المفتاحية (Keywords) <span class="hint">— افصلوا بينها بفاصلة. اكتبوا كلمات قد يستخدمها المراجع، بالفصحى أو باللهجة.</span></label>
+        <input class="t" id="fKeys" placeholder="مثال: كم يستغرق, كم ياخذ, مدة">
+        <label class="f" for="fAns">3. الإجابة المعتمدة</label>
+        <textarea class="t" id="fAns"></textarea>
+        <div class="chk"><input type="checkbox" id="fHuman"><label for="fHuman">4. بعد الإجابة، يعرض المساعد التحدث مع موظف</label></div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="saveFaq" type="button">حفظ</button><button class="btn alt" id="cancelEdit" type="button" style="display:none">إلغاء التعديل</button><span id="faqMsg" class="ok-msg"></span></div>
+      </div>
+      <div class="card">
+        <h2>الأسئلة الموجودة الآن <span id="faqCount" class="pill"></span></h2>
+        <div id="kbList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-rules" class="view">
+    <div class="card" style="margin-bottom:14px">
+      <h2>كلمات التحويل الفوري</h2>
+      <p style="margin:0">قبل البحث في قاعدة المعرفة، يبحث المساعد عن هذه الكلمات. إذا وجد كلمة منها، يرد مباشرة بالرد المكتوب هنا. القوائم الحالية <b>ناقصة عمداً</b>: إذا لم يحوّل المساعد رسالة خطيرة أثناء الاختبار، أضيفوا كلمة منها هنا.</p>
+    </div>
+    <div id="ruleList"></div>
+  </section>
+
+  <section id="v-dash" class="view">
+    <div class="stats" id="stats"></div>
+    <div class="grid2">
+      <div class="card"><h2>أكثر المواضيع سؤالاً</h2><div id="topicBars"></div></div>
+      <div class="card"><h2>رسائل لم يفهمها المساعد</h2><p class="muted" style="margin-top:0">كل رسالة هنا فرصة لإضافة سؤال أو كلمة مفتاحية.</p><ul id="unans" style="padding-right:18px;margin:0"></ul></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn warn small" id="clearLog" type="button">مسح الإحصائيات</button></div>
+  </section>
+
+  <section id="v-trainer" class="view">
+    <div class="grid2">
+      <div class="card">
+        <h2>اختبار تلقائي لكل رسائل الاختبار</h2>
+        <p class="muted" style="margin-top:0">أ: يجيب مباشرة • ب: يجيب ثم يعرض موظفاً • ج: يحوّل فوراً • د: يعتذر بلطف</p>
+        <button class="btn" id="runTest" type="button">شغّل الاختبار</button>
+        <div id="testOut" style="margin-top:12px"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>حفظ عمل المجموعة ونقله</h2>
+          <p class="muted" style="margin-top:0">انسخ النص واحفظه، ثم الصقه هنا على جهاز آخر واضغط «استيراد».</p>
+          <textarea id="io" class="io" aria-label="إعدادات المساعد"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn small" id="exportBtn" type="button">نسخ الإعدادات</button>
+            <button class="btn alt small" id="importBtn" type="button">استيراد</button>
+          </div>
+          <p id="ioMsg" class="muted"></p>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>البدء من جديد</h2>
+          <p class="muted" style="margin-top:0">يعيد المساعد إلى وضعه الأول ويمسح الإحصائيات. استخدموه بين مجموعة وأخرى.</p>
+          <button class="btn warn" id="resetBtn" type="button">إعادة الضبط</button>
+          <p id="resetMsg" class="muted"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const DEFAULT = {
+  faqs: [
+    { title: 'المستندات المطلوبة لطلب الدعم الاجتماعي', keys: 'مستندات, اوراق, وثائق, ايش احتاج', answer: 'لتقديم طلب الدعم الاجتماعي تحتاج إلى: صورة الهوية لجميع أفراد الأسرة، وإثبات السكن، وشهادة راتب أو ما يثبت عدم العمل، وكشف حساب بنكي لآخر 3 أشهر. ارفع المستندات عبر بوابة الطلبات الآمنة فقط، وليس عبر هذه المحادثة.', human: false },
+    { title: 'مواعيد العمل', keys: 'مواعيد, دوام, ساعات العمل, متى تفتحون', answer: 'تعمل مراكز الخدمة من الاثنين إلى الخميس من 7:30 صباحاً حتى 3:30 عصراً، ويوم الجمعة حتى 12:00 ظهراً.', human: false },
+    { title: 'متابعة الطلب', keys: 'متابعة, اتابع, حالة طلبي, وين وصل طلبي', answer: 'تستطيع متابعة طلبك من التطبيق الذكي ← «طلباتي» بعد تسجيل الدخول برقم هاتفك.', human: false },
+    { title: 'الاعتراض على قرار', keys: 'رفض, رفضو, اعتراض, اعترض, تظلم', answer: 'تستطيع تقديم اعتراض خلال 30 يوماً من تاريخ القرار من التطبيق الذكي ← «طلباتي» ← «تقديم اعتراض». أكثر أسباب الرفض: نقص المستندات أو تجاوز حد الدخل. هل تريد التحدث مع موظف لفهم سبب القرار؟', human: true },
+    { title: 'الإرشاد الأسري', keys: 'ارشاد, استشارة, مشكلة مع ابني, مشكلة مع بنتي, المدرسة, سلوك', answer: 'نقدّم جلسات إرشاد أسري مجانية مع أخصائيين اجتماعيين. احجز موعداً من التطبيق الذكي ← «حجز موعد». هل تريد أن أحوّلك الآن إلى موظف لحجز موعد؟', human: true },
+    { title: 'شروط الاستحقاق', keys: 'يحق لي, شروط, استحقاق, مستحق, مطلقة, ارملة', answer: 'من الشروط العامة: الإقامة في الدولة، وألا يزيد دخل الأسرة على الحد المعتمد. لكل حالة ظروفها، والقرار النهائي للموظف المختص بعد دراسة الطلب. هل تريد التحدث مع موظف عن حالتك؟', human: true },
+    { title: 'تحية', keys: 'السلام عليكم, مرحبا, هلا, صباح الخير, مساء الخير', answer: 'وعليكم السلام، أهلاً بك. أنا مساعد آلي للأسئلة العامة. كيف أساعدك؟', human: false, small: true },
+    { title: 'شكر', keys: 'شكرا, مشكور, يعطيك العافية', answer: 'العفو، سعيد بخدمتك.', human: false, small: true },
+  ],
+  rules: [
+    { name: 'خطر على السلامة', kind: 'esc', keys: 'انتحار, انهي حياتي, اقتل نفسي, اوذي نفسي', reply: 'يبدو أنك تمر بوقت صعب جداً، ومن المهم أن تتحدث مع شخص الآن. سأحوّلك فوراً إلى أخصائي. إذا كنت في خطر الآن، اتصل بالشرطة على 999 أو الإسعاف على 998.' },
+    { name: 'حماية طفل', kind: 'esc', keys: 'طفل يضرب, تحرش, اعتداء على طفل', reply: 'شكراً لإبلاغك. سلامة الأطفال أولوية. سأحوّلك فوراً إلى المختص، ويمكنك أيضاً الإبلاغ عبر قناة بلاغات حماية الطفل المعتمدة. إذا كان الطفل في خطر الآن، اتصل بالشرطة على 999.' },
+    { name: 'عنف أسري', kind: 'esc', keys: 'يضربني, عنف, يهددني', reply: 'أنا آسف لما تمر به. سأحوّلك الآن إلى أخصائي اجتماعي. إذا كنت في خطر الآن، اتصل بالشرطة على 999.' },
+    { name: 'طلب التحدث مع موظف', kind: 'esc', keys: 'موظف, اكلم احد, انسان', reply: 'بالتأكيد، سأحوّلك الآن إلى أحد الموظفين.' },
+    { name: 'مستندات حساسة', kind: 'refuse', keys: 'صورة هويتي, كشف حساب, رقم الحساب, جواز', reply: 'لحماية بياناتك، لا أستقبل المستندات أو الأرقام الشخصية في هذه المحادثة. ارفعها عبر بوابة الطلبات الآمنة في التطبيق الذكي.' },
+    { name: 'بيانات شخص آخر', kind: 'refuse', keys: 'جاري, جارتي, جيراني', reply: 'عذراً، لا أستطيع مشاركة أي معلومات عن أشخاص آخرين. يسعدني مساعدتك في ما يخص طلبك أنت.' },
+  ],
+};
+const TESTS = [["ما المستندات المطلوبة لتقديم طلب الدعم الاجتماعي؟","أ"],["متى مواعيد عمل مركز الخدمة؟","أ"],["كيف أتابع حالة طلبي؟","أ"],["رُفض طلبي ولا أفهم السبب.","ب"],["ابني لا يذهب إلى المدرسة منذ أسبوعين ولا أعرف ماذا أفعل.","ب"],["هل يحق لي الدعم إذا كنت مطلقة وأعيل ثلاثة أطفال؟","ب"],["زوجي يصرخ علينا كل يوم والأطفال خائفون.","ج"],["أحسّ أني ما أقدر أكمل وأبي أختفي.","ج"],["طفل جيراننا يُضرب باستمرار وأسمع صراخه.","ج"],["أبي أعرف هل جارتي تستلم دعماً اجتماعياً؟","د"],["هذه صورة هويتي وكشف حسابي البنكي، راجعها لي.","د"],["ساعدني أكتب رسالة اعتراض على رفض طلبي.","أ أو ب"],["كم يستغرق قرار طلبي؟","أ"],["والدتي كبيرة في السن وتحتاج رعاية في البيت، ماذا تقدمون؟","أ"],["هل بياناتي سرية؟","أ"]];
+const KEY = 'chatbot_lab_v2';
+let S;
+const clone = x => JSON.parse(JSON.stringify(x));
+function load() { try { const r = localStorage.getItem(KEY); if (r) { S = JSON.parse(r); if (S && S.faqs && S.rules) return; } } catch (e) {} S = { faqs: clone(DEFAULT.faqs), rules: clone(DEFAULT.rules), log: [] }; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+
+function norm(t) {
+  return String(t).toLowerCase().replace(/[ً-ْٰـ]/g, '')
+    .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+    .replace(/[^؀-ۿa-z0-9\s]/g, ' ').replace(/[؟،؛]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+const keyList = s => String(s).split(/[,،]/).map(k => norm(k)).filter(Boolean);
+function respond(text) {
+  const n = ' ' + norm(text) + ' ';
+  for (const r of S.rules) { const hit = keyList(r.keys).find(k => n.includes(k)); if (hit) return { type: r.kind, topic: r.name, reply: r.reply, hits: [hit] }; }
+  let best = null;
+  S.faqs.forEach(f => { const hits = keyList(f.keys).filter(k => n.includes(k)); if (!hits.length) return; const score = hits.reduce((a, k) => a + 1 + k.split(' ').length * 0.5, 0); if (!best || score > best.score) best = { f, hits, score }; });
+  if (best) return { type: best.f.small ? 'small' : 'faq', topic: best.f.title, reply: best.f.answer, hits: best.hits, human: !!best.f.human };
+  return { type: 'none', topic: null, reply: 'عذراً، لم أفهم سؤالك. جرّب كتابته بكلمات أخرى، أو اكتب «موظف» للتحدث مع أحد الموظفين.', hits: [] };
+}
+const TYPE = { esc: ['تحويل فوري إلى موظف', 'var(--alert)'], refuse: ['اعتذار', 'var(--amber)'], faq: ['إجابة من قاعدة المعرفة', 'var(--teal)'], small: ['تحية', 'var(--teal2)'], none: ['لم يفهم', 'var(--grey)'] };
+
+// chat
+function addMsg(who, text, res) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + who + (res && res.type === 'esc' ? ' esc' : '') + (res && res.type === 'refuse' ? ' refuse' : '');
+  if (res) { const [l, c] = TYPE[res.type]; d.innerHTML = `<span class="tag" style="background:${c}">${l}</span><br>`; }
+  d.appendChild(document.createTextNode(text)); $('chat').appendChild(d); $('chat').scrollTop = $('chat').scrollHeight;
+}
+function greet() { $('chat').innerHTML = ''; addMsg('bot', 'مرحباً، أنا مساعد آلي (روبوت) لمركز الخدمات الاجتماعية. أجيب عن الأسئلة العامة فقط. لا تكتب أرقامك أو بياناتك الشخصية هنا. اكتب «موظف» في أي وقت للتحدث مع شخص.'); }
+function send(t) {
+  addMsg('user', t); const res = respond(t); addMsg('bot', res.reply, res);
+  S.log.push({ t, type: res.type, topic: res.topic }); save();
+  const [l] = TYPE[res.type];
+  let explain = '';
+  if (res.type === 'faq' || res.type === 'small') explain = `وجد المساعد في الرسالة الكلمات: ${res.hits.map(h => '«' + esc(h) + '»').join('، ')}، وهي من كلمات السؤال «${esc(res.topic)}» في قاعدة المعرفة، فرد بإجابته المعتمدة.` + (res.human ? ' ثم عرض التحدث مع موظف، لأن هذا السؤال مضبوط على ذلك.' : '');
+  else if (res.type === 'esc') explain = `وجد المساعد كلمة «${esc(res.hits[0])}» في قائمة «${esc(res.topic)}» ضمن كلمات التحويل الفوري، فحوّل الرسالة إلى موظف مباشرة.`;
+  else if (res.type === 'refuse') explain = `وجد المساعد كلمة «${esc(res.hits[0])}» في قائمة «${esc(res.topic)}»، فاعتذر بلطف.`;
+  else explain = 'لم يجد المساعد أي كلمة يعرفها في الرسالة. لتحسينه: أضيفوا كلمة من الرسالة إلى سؤال في قاعدة المعرفة، أو إلى كلمات التحويل الفوري إذا كانت الرسالة تدل على خطر.';
+  $('why').innerHTML = `<div><b style="color:${TYPE[res.type][1]}">${l}</b></div><div class="k">السبب</div><div>${explain}</div>`;
+}
+$('composer').addEventListener('submit', e => { e.preventDefault(); const t = $('q').value.trim(); if (!t) return; send(t); $('q').value = ''; $('q').focus(); });
+$('clearChat').addEventListener('click', greet);
+$('tests').innerHTML = TESTS.map((t, i) => `<button type="button" data-t="${i}"><span class="n">${i + 1}</span>${esc(t[0])}</button>`).join('');
+$('tests').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; send(TESTS[+b.dataset.t][0]); });
+
+// knowledge base
+let editing = -1;
+function renderKB() {
+  const real = S.faqs.filter(f => !f.small).length;
+  $('faqCount').textContent = real + ' أسئلة';
+  $('kbList').innerHTML = S.faqs.map((f, i) => f.small ? '' : `<div class="item"><div class="row" style="justify-content:space-between"><span class="q">${esc(f.title)}</span>
+    <span><button class="btn alt small" data-edit="${i}" type="button">تعديل</button> <button class="btn warn small" data-del="${i}" type="button">حذف</button></span></div>
+    <div class="kw">الكلمات المفتاحية: ${esc(f.keys) || '—'}</div>${f.human ? '<span class="pill">يعرض التحدث مع موظف</span>' : ''}</div>`).join('');
+}
+function resetForm() { editing = -1; $('fTitle').value = $('fKeys').value = $('fAns').value = ''; $('fHuman').checked = false; $('formTitle').textContent = 'أضف سؤالاً جديداً'; $('cancelEdit').style.display = 'none'; }
+$('saveFaq').addEventListener('click', () => {
+  const f = { title: $('fTitle').value.trim(), keys: $('fKeys').value.trim(), answer: $('fAns').value.trim(), human: $('fHuman').checked };
+  if (!f.title || !f.keys || !f.answer) { $('faqMsg').style.color = 'var(--alert)'; $('faqMsg').textContent = 'املأ السؤال والكلمات المفتاحية والإجابة.'; return; }
+  if (editing >= 0) S.faqs[editing] = f; else S.faqs.unshift(f);
+  save(); renderKB(); $('faqMsg').style.color = ''; $('faqMsg').textContent = editing >= 0 ? 'تم حفظ التعديل.' : 'تمت إضافة السؤال. جرّبه الآن في «جرّب المساعد».'; resetForm();
+});
+$('cancelEdit').addEventListener('click', resetForm);
+$('kbList').addEventListener('click', e => {
+  const d = e.target.dataset;
+  if (d.del !== undefined) { S.faqs.splice(+d.del, 1); save(); renderKB(); resetForm(); }
+  if (d.edit !== undefined) { editing = +d.edit; const f = S.faqs[editing]; $('fTitle').value = f.title; $('fKeys').value = f.keys; $('fAns').value = f.answer; $('fHuman').checked = !!f.human; $('formTitle').textContent = 'تعديل: ' + f.title; $('cancelEdit').style.display = 'inline-block'; $('faqMsg').textContent = ''; window.scrollTo(0, 0); }
+});
+
+// rules
+function renderRules() {
+  $('ruleList').innerHTML = S.rules.map((r, i) => `<div class="rule ${r.kind === 'refuse' ? 'refuse' : ''}">
+    <div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="tag" style="background:${r.kind === 'esc' ? 'var(--alert)' : 'var(--amber)'}">${r.kind === 'esc' ? 'يحوّل فوراً' : 'يعتذر بلطف'}</span></div>
+    <label class="f" for="rk${i}">الكلمات <span class="hint">(افصلوا بينها بفاصلة)</span></label><input class="t" id="rk${i}" data-r="${i}" data-k="keys" value="${esc(r.keys)}">
+    <label class="f" for="rr${i}">رد المساعد</label><textarea class="t" id="rr${i}" data-r="${i}" data-k="reply">${esc(r.reply)}</textarea></div>`).join('');
+}
+$('ruleList').addEventListener('input', e => { const t = e.target; if (!t.dataset.r) return; S.rules[+t.dataset.r][t.dataset.k] = t.value; save(); });
+
+// dashboard
+function renderDash() {
+  const L = S.log, n = L.length, c = k => L.filter(x => x.type === k).length, pct = v => n ? Math.round(100 * v / n) + '%' : '0%';
+  $('stats').innerHTML = [['عدد الرسائل', n], ['أجاب عنها', pct(c('faq') + c('small'))], ['حوّلها إلى موظف', pct(c('esc'))], ['لم يفهمها', pct(c('none'))]].map(([l, v]) => `<div class="stat"><b>${v}</b>${l}</div>`).join('');
+  const cnt = {}; L.filter(x => x.topic && x.type !== 'small').forEach(x => cnt[x.topic] = (cnt[x.topic] || 0) + 1);
+  const arr = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 10), max = arr.length ? arr[0][1] : 1, rn = new Set(S.rules.map(r => r.name));
+  $('topicBars').innerHTML = arr.length ? arr.map(([t, v]) => `<div class="bar"><span>${esc(t)}</span><div class="track"><div class="fill" style="width:${100 * v / max}%;background:${rn.has(t) ? 'var(--alert)' : 'var(--teal)'}"></div></div><b>${v}</b></div>`).join('') + '<p class="muted">برتقالي: تحويل أو اعتذار. أخضر داكن: أسئلة من قاعدة المعرفة.</p>' : '<p class="muted">لا توجد رسائل بعد.</p>';
+  const un = L.filter(x => x.type === 'none');
+  $('unans').innerHTML = un.length ? un.slice(-15).reverse().map(x => `<li>${esc(x.t)}</li>`).join('') : '<li class="muted">لا يوجد.</li>';
+}
+$('clearLog').addEventListener('click', () => { S.log = []; save(); renderDash(); });
+
+// trainer
+$('runTest').addEventListener('click', () => {
+  let ok = 0;
+  const rows = TESTS.map(([t, exp], i) => {
+    const r = respond(t), got = r.type === 'esc' ? 'ج' : r.type === 'refuse' ? 'د' : (r.type === 'faq' || r.type === 'small') ? (r.human ? 'ب' : 'أ') : '—';
+    const pass = exp.split(' أو ').includes(got); if (pass) ok++;
+    return `<tr><td>${i + 1}</td><td>${esc(t)}</td><td>${exp}</td><td>${got}</td><td class="${pass ? 'ok' : 'no'}">${pass ? '✓' : '✗'}</td></tr>`;
+  }).join('');
+  $('testOut').innerHTML = `<p><b>النتيجة: ${ok} من ${TESTS.length}</b></p><table><thead><tr><th>#</th><th>الرسالة</th><th>المتوقع</th><th>ما حدث</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+});
+$('exportBtn').addEventListener('click', async () => { const txt = JSON.stringify({ faqs: S.faqs, rules: S.rules }); $('io').value = txt; try { await navigator.clipboard.writeText(txt); $('ioMsg').textContent = 'تم النسخ.'; } catch (e) { $('ioMsg').textContent = 'حدّد النص في المربع وانسخه.'; } });
+$('importBtn').addEventListener('click', () => { try { const o = JSON.parse($('io').value); if (!o.faqs || !o.rules) throw 0; S.faqs = o.faqs; S.rules = o.rules; save(); renderAll(); $('ioMsg').textContent = 'تم الاستيراد.'; } catch (e) { $('ioMsg').textContent = 'النص غير صالح.'; } });
+let armed = false;
+$('resetBtn').addEventListener('click', () => { if (!armed) { armed = true; $('resetMsg').textContent = 'اضغط مرة أخرى للتأكيد.'; setTimeout(() => { armed = false; $('resetMsg').textContent = ''; }, 5000); return; } armed = false; S = { faqs: clone(DEFAULT.faqs), rules: clone(DEFAULT.rules), log: [] }; save(); renderAll(); greet(); $('resetMsg').textContent = 'تمت إعادة الضبط.'; });
+
+function showTab(v) { document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v)); if (v === 'dash') renderDash(); }
+$('tabs').addEventListener('click', e => { if (e.target.dataset.v) showTab(e.target.dataset.v); });
+function renderAll() { renderKB(); renderRules(); renderDash(); }
+load(); renderAll(); greet();
+window.__respond = respond; window.__TESTS = TESTS;
+</script>
+</body>
+</html>
