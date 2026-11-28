@@ -73,6 +73,15 @@
   textarea.io { width:100%; min-height:110px; font-family:monospace; font-size:12px; direction:ltr; border:1px solid var(--line); border-radius:6px; padding:8px; }
   .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   .ok-msg { color:#1E7B4A; font-weight:600; }
+  .types { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+  .type { position:relative; background:var(--light); border-radius:10px; padding:12px 14px; }
+  .type h3 { margin:0 0 6px; font-size:16px; color:var(--teal); }
+  .type p { margin:0 0 6px; font-size:14.5px; }
+  .type .hint { color:var(--grey); font-size:14px; margin:0; }
+  .type.ours { background:#fff; border:2px solid var(--teal); padding-top:20px; }
+  .tagours { position:absolute; top:-11px; inset-inline-start:12px; background:var(--teal); color:#fff; font-size:12px; font-weight:700; border-radius:10px; padding:1px 10px; }
+  ul.why { margin:6px 0 0; padding-inline-start:20px; font-size:15px; }
+  @media (max-width:880px) { .types { grid-template-columns:1fr; } }
   .brand { display:flex; align-items:center; gap:14px; }
   .logo { background:#fff; border-radius:8px; padding:5px 7px; display:flex; align-items:center; flex:none; }
   .logo img { height:52px; width:auto; display:block; }
@@ -120,6 +129,21 @@
           <div class="tests" id="tests"></div>
         </div>
       </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>كيف تُبنى روبوتات المحادثة؟ ثلاثة أنواع</h2>
+      <p class="muted" style="margin-top:0">مساعد اليوم من النوع الأول، وهو الأبسط. الأنظمة الحقيقية الحديثة غالباً من النوع الثاني أو الثالث.</p>
+      <div class="types">
+        <div class="type ours"><span class="tagours">مساعد اليوم</span><h3>1. يبحث عن كلمات (Keywords)</h3><p>يبحث عن الكلمات وأشكالها المختلفة (ضرب، يضرب، يُضرب، يضربني)، حتى لو جاءت متفرقة في الجملة، ثم يرد بإجابة جاهزة.</p><p class="hint"><b>يفهم المعنى؟</b> لا. رسالة «أبى أختفي» لا تحتوي أي كلمة من قائمة الخطر، فلا يفهمها، مع أن معناها خطير.</p></div>
+        <div class="type"><h3>2. يتعرّف على المقصود (Intent Recognition)</h3><p>نعلّمه أمثلة كثيرة لكل موضوع، مثل 50 طريقة للإبلاغ عن طفل في خطر، فيتعلم المعنى بالتعلم الآلي (Machine Learning).</p><p class="hint"><b>يفهم المعنى؟</b> نعم، في المواضيع التي تعلّمها.</p></div>
+        <div class="type"><h3>3. نموذج لغوي كبير (LLM) مع إجابات معتمدة</h3><p>نموذج مثل ChatGPT أو Claude يفهم الرسالة، لكنه مقيّد بأن يجيب من المحتوى المعتمد فقط، مع قواعد أمان.</p><p class="hint"><b>يفهم المعنى؟</b> نعم، وهو الأكثر مرونة.</p></div>
+      </div>
+      <h3>لماذا اخترنا النوع الأبسط اليوم؟</h3>
+      <ul class="why">
+        <li><b>نرى كيف يقرّر:</b> مربع «كيف قرّر المساعد؟» يبيّن الكلمة التي سبّبت كل رد.</li>
+        <li><b>لا يخترع إجابات:</b> يرد من الإجابات المعتمدة فقط.</li>
+        <li><b>نتعلّم الدرس الأهم:</b> الخطر لا يأتي دائماً بالكلمات المتوقعة. وحتى الأنظمة الذكية تحتاج القواعد نفسها ومراجعة الأخصائيين.</li>
+      </ul>
     </div>
   </section>
 
@@ -227,12 +251,37 @@ function norm(t) {
     .replace(/[^؀-ۿa-z0-9\s]/g, ' ').replace(/[؟،؛]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 const keyList = s => String(s).split(/[,،]/).map(k => norm(k)).filter(Boolean);
+// Word forms: strip common Arabic prefixes and endings, so ضرب، يضرب، يُضرب، يضربني، والضرب count as the same word.
+const PRE = ['وال', 'بال', 'كال', 'فال', 'لل', 'ال', 'و', 'ف', 'ب', 'ل', 'ك'];
+const VPRE = ['سي', 'ست', 'ي', 'ت', 'ن'];
+const SUF = ['هما', 'كما', 'ون', 'ين', 'ان', 'ات', 'وا', 'ني', 'نا', 'ها', 'هم', 'هن', 'كم', 'ه', 'ي', 'ك'];
+const formCache = new Map();
+function forms(w) {
+  if (formCache.has(w)) return formCache.get(w);
+  const strip = (arr, list) => { const r = []; arr.forEach(x => { r.push(x); list.forEach(p => { if (x.startsWith(p) && x.length - p.length >= 3) r.push(x.slice(p.length)); }); }); return r; };
+  const out = new Set();
+  strip(strip([w], PRE), VPRE).forEach(x => { out.add(x); SUF.forEach(sf => { if (x.endsWith(sf) && x.length - sf.length >= 3) out.add(x.slice(0, -sf.length)); }); });
+  formCache.set(w, out); return out;
+}
+const tokens = t => norm(t).split(' ').filter(Boolean);
+// Returns the message word that matches one keyword word (in any form), or null
+function wordHit(kw, toks) { const kf = forms(kw); return toks.find(t => [...forms(t)].some(f => kf.has(f))) || null; }
+// A keyword matches when every word in it appears in the message, in any form and in any order.
+function keyHit(k, toks) { const found = k.split(' ').map(w => wordHit(w, toks)); return found.every(Boolean) ? found : null; }
 function respond(text) {
-  const n = ' ' + norm(text) + ' ';
-  for (const r of S.rules) { const hit = keyList(r.keys).find(k => n.includes(k)); if (hit) return { type: r.kind, topic: r.name, reply: r.reply, hits: [hit] }; }
+  const toks = tokens(text);
+  for (const r of S.rules) {
+    for (const k of keyList(r.keys)) { const f = keyHit(k, toks); if (f) return { type: r.kind, topic: r.name, reply: r.reply, hits: [k], seen: f }; }
+  }
   let best = null;
-  S.faqs.forEach(f => { const hits = keyList(f.keys).filter(k => n.includes(k)); if (!hits.length) return; const score = hits.reduce((a, k) => a + 1 + k.split(' ').length * 0.5, 0); if (!best || score > best.score) best = { f, hits, score }; });
-  if (best) return { type: best.f.small ? 'small' : 'faq', topic: best.f.title, reply: best.f.answer, hits: best.hits, human: !!best.f.human };
+  S.faqs.forEach(f => {
+    const hits = [], seen = [];
+    keyList(f.keys).forEach(k => { const m = keyHit(k, toks); if (m) { hits.push(k); seen.push(...m); } });
+    if (!hits.length) return;
+    const score = hits.reduce((a, k) => a + 1 + k.split(' ').length * 0.5, 0);
+    if (!best || score > best.score) best = { f, hits, seen, score };
+  });
+  if (best) return { type: best.f.small ? 'small' : 'faq', topic: best.f.title, reply: best.f.answer, hits: best.hits, seen: best.seen, human: !!best.f.human };
   return { type: 'none', topic: null, reply: 'عذراً، لم أفهم سؤالك. جرّب كتابته بكلمات أخرى، أو اكتب «موظف» للتحدث مع أحد الموظفين.', hits: [] };
 }
 const TYPE = { esc: ['تحويل فوري إلى موظف', 'var(--alert)'], refuse: ['اعتذار', 'var(--amber)'], faq: ['إجابة من قاعدة المعرفة', 'var(--teal)'], small: ['تحية', 'var(--teal2)'], none: ['لم يفهم', 'var(--grey)'] };
@@ -250,9 +299,10 @@ function send(t) {
   S.log.push({ t, type: res.type, topic: res.topic }); save();
   const [l] = TYPE[res.type];
   let explain = '';
-  if (res.type === 'faq' || res.type === 'small') explain = `وجد المساعد في الرسالة الكلمات: ${res.hits.map(h => '«' + esc(h) + '»').join('، ')}، وهي من كلمات السؤال «${esc(res.topic)}» في قاعدة المعرفة، فرد بإجابته المعتمدة.` + (res.human ? ' ثم عرض التحدث مع موظف، لأن هذا السؤال مضبوط على ذلك.' : '');
-  else if (res.type === 'esc') explain = `وجد المساعد كلمة «${esc(res.hits[0])}» في قائمة «${esc(res.topic)}» ضمن كلمات التحويل الفوري، فحوّل الرسالة إلى موظف مباشرة.`;
-  else if (res.type === 'refuse') explain = `وجد المساعد كلمة «${esc(res.hits[0])}» في قائمة «${esc(res.topic)}»، فاعتذر بلطف.`;
+  const seen = res.seen && res.seen.length ? ` (في رسالتك: ${[...new Set(res.seen)].map(w => '«' + esc(w) + '»').join('، ')})` : '';
+  if (res.type === 'faq' || res.type === 'small') explain = `وجد المساعد في الرسالة الكلمات: ${res.hits.map(h => '«' + esc(h) + '»').join('، ')}${seen}، وهي من كلمات السؤال «${esc(res.topic)}» في قاعدة المعرفة، فرد بإجابته المعتمدة.` + (res.human ? ' ثم عرض التحدث مع موظف، لأن هذا السؤال مضبوط على ذلك.' : '');
+  else if (res.type === 'esc') explain = `وجد المساعد الكلمة «${esc(res.hits[0])}»${seen} في قائمة «${esc(res.topic)}» ضمن كلمات التحويل الفوري، فحوّل الرسالة إلى موظف مباشرة.`;
+  else if (res.type === 'refuse') explain = `وجد المساعد الكلمة «${esc(res.hits[0])}»${seen} في قائمة «${esc(res.topic)}»، فاعتذر بلطف.`;
   else explain = 'لم يجد المساعد أي كلمة يعرفها في الرسالة. لتحسينه: أضيفوا كلمة من الرسالة إلى سؤال في قاعدة المعرفة، أو إلى كلمات التحويل الفوري إذا كانت الرسالة تدل على خطر.';
   $('why').innerHTML = `<div><b style="color:${TYPE[res.type][1]}">${l}</b></div><div class="k">السبب</div><div>${explain}</div>`;
 }
@@ -299,7 +349,7 @@ function renderDash() {
   $('stats').innerHTML = [['عدد الرسائل', n], ['أجاب عنها', pct(c('faq') + c('small'))], ['حوّلها إلى موظف', pct(c('esc'))], ['لم يفهمها', pct(c('none'))]].map(([l, v]) => `<div class="stat"><b>${v}</b>${l}</div>`).join('');
   const cnt = {}; L.filter(x => x.topic && x.type !== 'small').forEach(x => cnt[x.topic] = (cnt[x.topic] || 0) + 1);
   const arr = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 10), max = arr.length ? arr[0][1] : 1, rn = new Set(S.rules.map(r => r.name));
-  $('topicBars').innerHTML = arr.length ? arr.map(([t, v]) => `<div class="bar"><span>${esc(t)}</span><div class="track"><div class="fill" style="width:${100 * v / max}%;background:${rn.has(t) ? 'var(--alert)' : 'var(--teal)'}"></div></div><b>${v}</b></div>`).join('') + '<p class="muted">برتقالي: تحويل أو اعتذار. أخضر داكن: أسئلة من قاعدة المعرفة.</p>' : '<p class="muted">لا توجد رسائل بعد.</p>';
+  $('topicBars').innerHTML = arr.length ? arr.map(([t, v]) => `<div class="bar"><span>${esc(t)}</span><div class="track"><div class="fill" style="width:${100 * v / max}%;background:${rn.has(t) ? 'var(--alert)' : 'var(--teal)'}"></div></div><b>${v}</b></div>`).join('') + '<p class="muted">برتقالي: تحويل أو اعتذار. أحمر داكن: أسئلة من قاعدة المعرفة.</p>' : '<p class="muted">لا توجد رسائل بعد.</p>';
   const un = L.filter(x => x.type === 'none');
   $('unans').innerHTML = un.length ? un.slice(-15).reverse().map(x => `<li>${esc(x.t)}</li>`).join('') : '<li class="muted">لا يوجد.</li>';
 }
